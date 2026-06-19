@@ -155,6 +155,62 @@ export function OnboardingWizard() {
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [createdIssueRef, setCreatedIssueRef] = useState<string | null>(null);
 
+  const STORAGE_KEY = "onboarding_form_state";
+
+  // Load form state from localStorage on mount
+  useEffect(() => {
+    if (!effectiveOnboardingOpen) return;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const state = JSON.parse(saved);
+        setCompanyName(state.companyName || "");
+        setCompanyGoal(state.companyGoal || "");
+        setAgentName(state.agentName || "CEO");
+        setAdapterType(state.adapterType || "claude_local");
+        setModel(state.model || "");
+        setCommand(state.command || "");
+        setArgs(state.args || "");
+        setUrl(state.url || "");
+        setTaskTitle(state.taskTitle || "Hire your first engineer and create a hiring plan");
+        setTaskDescription(state.taskDescription || DEFAULT_TASK_DESCRIPTION);
+      }
+    } catch (err) {
+      // Silently ignore parse errors
+    }
+  }, [effectiveOnboardingOpen]);
+
+  // Auto-save form state to localStorage whenever it changes
+  useEffect(() => {
+    if (!effectiveOnboardingOpen) return;
+    const state = {
+      companyName,
+      companyGoal,
+      agentName,
+      adapterType,
+      model,
+      command,
+      args,
+      url,
+      taskTitle,
+      taskDescription,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (err) {
+      // Silently ignore storage errors
+    }
+  }, [effectiveOnboardingOpen, companyName, companyGoal, agentName, adapterType, model, command, args, url, taskTitle, taskDescription]);
+
+  // Clear saved state after successful launch
+  const clearSavedState = useCallback(() => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (err) {
+      // Silently ignore
+    }
+  }, []);
+
   useEffect(() => {
     setRouteDismissed(false);
   }, [location.pathname]);
@@ -569,6 +625,7 @@ export function OnboardingWizard() {
       }
 
       setSelectedCompanyId(createdCompanyId);
+      clearSavedState();
       reset();
       closeOnboarding();
       navigate(
@@ -584,12 +641,31 @@ export function OnboardingWizard() {
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    // Navigate between steps with arrow keys
+    if ((e.key === "ArrowRight" || e.key === "ArrowDown") && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
-      if (step === 1 && companyName.trim()) handleStep1Next();
-      else if (step === 2 && agentName.trim()) handleStep2Next();
-      else if (step === 3 && taskTitle.trim()) handleStep3Next();
-      else if (step === 4) handleLaunch();
+      if (step < 4) setStep((step + 1) as Step);
+    } else if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      if (step > 1 && step > (onboardingOptions.initialStep ?? 1)) {
+        setStep((step - 1) as Step);
+      }
+    }
+    // Submit form with Enter or Cmd/Ctrl+Enter
+    else if (e.key === "Enter" && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
+      // Only handle if not in a textarea
+      if ((e.target as HTMLElement).tagName !== "TEXTAREA" || e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+        if (step === 1 && companyName.trim()) handleStep1Next();
+        else if (step === 2 && agentName.trim()) handleStep2Next();
+        else if (step === 3 && taskTitle.trim()) handleStep3Next();
+        else if (step === 4) handleLaunch();
+      }
+    }
+    // Close dialog with Escape
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      handleClose();
     }
   }
 
@@ -604,6 +680,7 @@ export function OnboardingWizard() {
           handleClose();
         }
       }}
+      data-testid="onboarding-wizard"
     >
       <DialogPortal>
         {/* Plain div instead of DialogOverlay — Radix's overlay wraps in
@@ -614,10 +691,11 @@ export function OnboardingWizard() {
           {/* Close button */}
           <button
             onClick={handleClose}
-            className="absolute top-4 left-4 z-10 rounded-sm p-1.5 text-muted-foreground/60 hover:text-foreground transition-colors"
+            className="absolute top-4 left-4 z-10 rounded-sm p-1.5 text-muted-foreground/60 hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            aria-label="Close onboarding wizard (press Escape)"
+            title="Close (Esc)"
           >
-            <X className="h-5 w-5" />
-            <span className="sr-only">Close</span>
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
 
           {/* Left half — form */}
@@ -630,7 +708,14 @@ export function OnboardingWizard() {
             <div className="w-full max-w-md mx-auto my-auto px-4 py-8 sm:px-6 sm:py-10 md:px-8 md:py-12 shrink-0">
               {/* Progress bar */}
               <div className="mb-5 sm:mb-6">
-                <div className="h-1.5 bg-border rounded-full overflow-hidden">
+                <div
+                  className="h-1.5 bg-border rounded-full overflow-hidden"
+                  role="progressbar"
+                  aria-valuenow={step}
+                  aria-valuemin={1}
+                  aria-valuemax={4}
+                  aria-label={`Onboarding progress: Step ${step} of 4`}
+                >
                   <div
                     className="h-full bg-foreground transition-all duration-500 ease-out"
                     style={{ width: `${(step / 4) * 100}%` }}
@@ -639,7 +724,7 @@ export function OnboardingWizard() {
               </div>
 
               {/* Progress tabs */}
-              <div className="flex items-center gap-0 mb-6 sm:mb-8 border-b border-border overflow-x-auto">
+              <div className="flex items-center gap-0 mb-6 sm:mb-8 border-b border-border overflow-x-auto" role="tablist" aria-label="Onboarding steps">
                 {(
                   [
                     { step: 1 as Step, label: "Company", icon: Building2 },
@@ -650,14 +735,19 @@ export function OnboardingWizard() {
                 ).map(({ step: s, label, icon: Icon }) => {
                   const isCompleted = s < step || (s === 1 && createdCompanyId) || (s === 2 && createdAgentId) || (s === 3 && taskTitle.trim());
                   const isCurrent = s === step;
+                  const completedLabel = isCompleted && !isCurrent ? `${label} (completed)` : label;
                   return (
                     <button
                       key={s}
                       type="button"
+                      role="tab"
+                      aria-selected={isCurrent}
+                      aria-label={completedLabel}
+                      aria-controls={`step-${s}`}
                       onClick={() => setStep(s)}
-                      title={label}
+                      title={`${completedLabel}. Use arrow keys to navigate.`}
                       className={cn(
-                        "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer relative shrink-0 whitespace-nowrap",
+                        "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer relative shrink-0 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                         isCurrent
                           ? "border-foreground text-foreground"
                           : isCompleted
@@ -666,9 +756,9 @@ export function OnboardingWizard() {
                       )}
                     >
                       {isCompleted && !isCurrent ? (
-                        <Check className="h-3 sm:h-3.5 w-3 sm:w-3.5 text-green-500 shrink-0" />
+                        <Check className="h-3 sm:h-3.5 w-3 sm:w-3.5 text-green-500 shrink-0" aria-hidden="true" />
                       ) : (
-                        <Icon className="h-3 sm:h-3.5 w-3 sm:w-3.5 shrink-0" />
+                        <Icon className="h-3 sm:h-3.5 w-3 sm:w-3.5 shrink-0" aria-hidden="true" />
                       )}
                       <span className="hidden sm:inline">{label}</span>
                     </button>
@@ -678,46 +768,56 @@ export function OnboardingWizard() {
 
               {/* Step content */}
               {step === 1 && (
-                <div className="space-y-5">
+                <section id="step-1" className="space-y-5">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-1">
                     <div className="flex items-center gap-3">
                       <div className="bg-muted/50 p-2 rounded shrink-0">
-                        <Building2 className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
+                        <Building2 className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" aria-hidden="true" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-medium text-sm sm:text-base">Name your company</h3>
+                        <h2 className="font-medium text-sm sm:text-base">Name your company</h2>
                         <p className="text-xs text-muted-foreground">
                           This is the organization your agents will work for.
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5">
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5" aria-live="polite">
                       Step 1/4
                     </span>
                   </div>
                   <div className="mt-3 group">
                     <label
+                      htmlFor="company-name-input"
                       className={cn(
-                        "text-xs mb-1 block transition-colors",
+                        "text-xs mb-1 block font-medium transition-colors",
                         companyName.trim()
                           ? "text-foreground"
                           : "text-muted-foreground group-focus-within:text-foreground"
                       )}
                     >
-                      Company name
+                      Company name <span className="text-destructive" aria-label="required">*</span>
                     </label>
                     <input
+                      id="company-name-input"
+                      type="text"
                       className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50"
                       placeholder="Acme Corp"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
+                      aria-required="true"
+                      aria-invalid={companyName.trim() === ""}
+                      aria-describedby="company-name-hint"
                       autoFocus
                     />
+                    <div id="company-name-hint" className="text-xs text-muted-foreground mt-1">
+                      Choose a name for your organization
+                    </div>
                   </div>
                   <div className="group">
                     <label
+                      htmlFor="company-goal-input"
                       className={cn(
-                        "text-xs mb-1 block transition-colors",
+                        "text-xs mb-1 block font-medium transition-colors",
                         companyGoal.trim()
                           ? "text-foreground"
                           : "text-muted-foreground group-focus-within:text-foreground"
@@ -726,51 +826,64 @@ export function OnboardingWizard() {
                       Mission / goal (optional)
                     </label>
                     <textarea
+                      id="company-goal-input"
                       className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 resize-none min-h-[60px]"
                       placeholder="What is this company trying to achieve?"
                       value={companyGoal}
                       onChange={(e) => setCompanyGoal(e.target.value)}
+                      aria-describedby="company-goal-hint"
                     />
+                    <div id="company-goal-hint" className="text-xs text-muted-foreground mt-1">
+                      Describe your company's mission or long-term goals (you can leave this blank)
+                    </div>
                   </div>
-                </div>
+                </section>
               )}
 
               {step === 2 && (
-                <div className="space-y-5">
+                <section id="step-2" className="space-y-5">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-1">
                     <div className="flex items-center gap-3">
                       <div className="bg-muted/50 p-2 rounded shrink-0">
-                        <Bot className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
+                        <Bot className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" aria-hidden="true" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-medium text-sm sm:text-base">Create your first agent</h3>
+                        <h2 className="font-medium text-sm sm:text-base">Create your first agent</h2>
                         <p className="text-xs text-muted-foreground">
                           Choose how this agent will run tasks.
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5">
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5" aria-live="polite">
                       Step 2/4
                     </span>
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">
-                      Agent name
+                    <label htmlFor="agent-name-input" className="text-xs text-muted-foreground mb-1 block font-medium">
+                      Agent name <span className="text-destructive" aria-label="required">*</span>
                     </label>
                     <input
+                      id="agent-name-input"
+                      type="text"
                       className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50"
                       placeholder="CEO"
                       value={agentName}
                       onChange={(e) => setAgentName(e.target.value)}
+                      aria-required="true"
+                      aria-invalid={agentName.trim() === ""}
+                      aria-describedby="agent-name-hint"
                       autoFocus
                     />
+                    <div id="agent-name-hint" className="text-xs text-muted-foreground mt-1">
+                      Give your agent a name that reflects its role
+                    </div>
                   </div>
 
                   {/* Adapter type radio cards */}
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-2 block font-medium">
-                      Adapter type
-                    </label>
+                  <fieldset>
+                    <legend className="text-xs text-muted-foreground mb-2 block font-medium">
+                      Adapter type <span className="text-destructive" aria-label="required">*</span>
+                    </legend>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {recommendedAdapters.map((opt) => (
                         <button
@@ -868,7 +981,7 @@ export function OnboardingWizard() {
                         ))}
                       </div>
                     )}
-                  </div>
+                  </fieldset>
 
                   {/* Conditional adapter fields */}
                   {isLocalAdapter && (
@@ -1116,21 +1229,21 @@ export function OnboardingWizard() {
               )}
 
               {step === 3 && (
-                <div className="space-y-5">
+                <section id="step-3" className="space-y-5">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-1">
                     <div className="flex items-center gap-3">
                       <div className="bg-muted/50 p-2 rounded shrink-0">
-                        <ListTodo className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
+                        <ListTodo className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" aria-hidden="true" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-medium text-sm sm:text-base">Give it something to do</h3>
+                        <h2 className="font-medium text-sm sm:text-base">Give it something to do</h2>
                         <p className="text-xs text-muted-foreground">
                           Give your agent a small task to start with — a bug fix,
                           a research question, writing a script.
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5">
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5" aria-live="polite">
                       Step 3/4
                     </span>
                   </div>
@@ -1172,25 +1285,25 @@ export function OnboardingWizard() {
                       onChange={(e) => setTaskDescription(e.target.value)}
                     />
                   </div>
-                </div>
+                </section>
               )}
 
               {step === 4 && (
-                <div className="space-y-5">
+                <section id="step-4" className="space-y-5">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-1">
                     <div className="flex items-center gap-3">
                       <div className="bg-muted/50 p-2 rounded shrink-0">
-                        <Rocket className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
+                        <Rocket className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" aria-hidden="true" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-medium text-sm sm:text-base">Ready to launch</h3>
+                        <h2 className="font-medium text-sm sm:text-base">Ready to launch</h2>
                         <p className="text-xs text-muted-foreground">
                           Everything is set up. Launching now will create the
                           starter task, wake the agent, and open the issue.
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5">
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5" aria-live="polite">
                       Step 4/4
                     </span>
                   </div>
@@ -1234,7 +1347,7 @@ export function OnboardingWizard() {
                       <span className="font-medium">On launch:</span> We'll create the company, set up your CEO agent, and open the task so they can start working immediately.
                     </p>
                   </div>
-                </div>
+                </section>
               )}
 
               {/* Error */}
