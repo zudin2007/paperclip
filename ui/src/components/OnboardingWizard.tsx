@@ -628,6 +628,16 @@ export function OnboardingWizard() {
             )}
           >
             <div className="w-full max-w-md mx-auto my-auto px-8 py-12 shrink-0">
+              {/* Progress bar */}
+              <div className="mb-6">
+                <div className="h-1.5 bg-border rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-foreground transition-all duration-500 ease-out"
+                    style={{ width: `${(step / 4) * 100}%` }}
+                  />
+                </div>
+              </div>
+
               {/* Progress tabs */}
               <div className="flex items-center gap-0 mb-8 border-b border-border">
                 {(
@@ -637,37 +647,52 @@ export function OnboardingWizard() {
                     { step: 3 as Step, label: "Task", icon: ListTodo },
                     { step: 4 as Step, label: "Launch", icon: Rocket }
                   ] as const
-                ).map(({ step: s, label, icon: Icon }) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setStep(s)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer",
-                      s === step
-                        ? "border-foreground text-foreground"
-                        : "border-transparent text-muted-foreground hover:text-foreground/70 hover:border-border"
-                    )}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {label}
-                  </button>
-                ))}
+                ).map(({ step: s, label, icon: Icon }) => {
+                  const isCompleted = s < step || (s === 1 && createdCompanyId) || (s === 2 && createdAgentId) || (s === 3 && taskTitle.trim());
+                  const isCurrent = s === step;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setStep(s)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer relative",
+                        isCurrent
+                          ? "border-foreground text-foreground"
+                          : isCompleted
+                            ? "border-transparent text-foreground hover:border-border"
+                            : "border-transparent text-muted-foreground hover:text-foreground/70 hover:border-border"
+                      )}
+                    >
+                      {isCompleted && !isCurrent ? (
+                        <Check className="h-3.5 w-3.5 text-green-500" />
+                      ) : (
+                        <Icon className="h-3.5 w-3.5" />
+                      )}
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Step content */}
               {step === 1 && (
                 <div className="space-y-5">
-                  <div className="flex items-center gap-3 mb-1">
-                    <div className="bg-muted/50 p-2">
-                      <Building2 className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-muted/50 p-2 rounded">
+                        <Building2 className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">Name your company</h3>
+                        <p className="text-xs text-muted-foreground">
+                          This is the organization your agents will work for.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium">Name your company</h3>
-                      <p className="text-xs text-muted-foreground">
-                        This is the organization your agents will work for.
-                      </p>
-                    </div>
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                      Step 1 of 4
+                    </span>
                   </div>
                   <div className="mt-3 group">
                     <label
@@ -711,16 +736,21 @@ export function OnboardingWizard() {
 
               {step === 2 && (
                 <div className="space-y-5">
-                  <div className="flex items-center gap-3 mb-1">
-                    <div className="bg-muted/50 p-2">
-                      <Bot className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-muted/50 p-2 rounded">
+                        <Bot className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">Create your first agent</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Choose how this agent will run tasks.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium">Create your first agent</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Choose how this agent will run tasks.
-                      </p>
-                    </div>
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                      Step 2 of 4
+                    </span>
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground mb-1 block">
@@ -1085,37 +1115,56 @@ export function OnboardingWizard() {
 
               {step === 3 && (
                 <div className="space-y-5">
-                  <div className="flex items-center gap-3 mb-1">
-                    <div className="bg-muted/50 p-2">
-                      <ListTodo className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-muted/50 p-2 rounded">
+                        <ListTodo className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">Give it something to do</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Give your agent a small task to start with — a bug fix,
+                          a research question, writing a script.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium">Give it something to do</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Give your agent a small task to start with — a bug fix,
-                        a research question, writing a script.
-                      </p>
-                    </div>
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                      Step 3 of 4
+                    </span>
                   </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">
+                  <div className="group">
+                    <label
+                      className={cn(
+                        "text-xs mb-1.5 block font-medium transition-colors",
+                        taskTitle.trim()
+                          ? "text-foreground"
+                          : "text-muted-foreground group-focus-within:text-foreground"
+                      )}
+                    >
                       Task title
                     </label>
                     <input
-                      className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50"
+                      className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 transition-colors"
                       placeholder="e.g. Research competitor pricing"
                       value={taskTitle}
                       onChange={(e) => setTaskTitle(e.target.value)}
                       autoFocus
                     />
                   </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">
+                  <div className="group">
+                    <label
+                      className={cn(
+                        "text-xs mb-1.5 block font-medium transition-colors",
+                        taskDescription.trim()
+                          ? "text-foreground"
+                          : "text-muted-foreground group-focus-within:text-foreground"
+                      )}
+                    >
                       Description (optional)
                     </label>
                     <textarea
                       ref={textareaRef}
-                      className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 resize-none min-h-[120px] max-h-[300px] overflow-y-auto"
+                      className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 resize-none min-h-[120px] max-h-[300px] overflow-y-auto transition-colors"
                       placeholder="Add more detail about what the agent should do..."
                       value={taskDescription}
                       onChange={(e) => setTaskDescription(e.target.value)}
@@ -1126,59 +1175,70 @@ export function OnboardingWizard() {
 
               {step === 4 && (
                 <div className="space-y-5">
-                  <div className="flex items-center gap-3 mb-1">
-                    <div className="bg-muted/50 p-2">
-                      <Rocket className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-muted/50 p-2 rounded">
+                        <Rocket className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">Ready to launch</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Everything is set up. Launching now will create the
+                          starter task, wake the agent, and open the issue.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium">Ready to launch</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Everything is set up. Launching now will create the
-                        starter task, wake the agent, and open the issue.
-                      </p>
-                    </div>
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                      Step 4 of 4
+                    </span>
                   </div>
-                  <div className="border border-border divide-y divide-border">
-                    <div className="flex items-center gap-3 px-3 py-2.5">
-                      <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="border border-border/50 divide-y divide-border/50 bg-muted/30 rounded-md overflow-hidden">
+                    <div className="flex items-start gap-3 px-3.5 py-3">
+                      <Building2 className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">
                           {companyName}
                         </p>
-                        <p className="text-xs text-muted-foreground">Company</p>
+                        <p className="text-xs text-muted-foreground">Company organization</p>
                       </div>
-                      <Check className="h-4 w-4 text-green-500 shrink-0" />
+                      <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
                     </div>
-                    <div className="flex items-center gap-3 px-3 py-2.5">
-                      <Bot className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex items-start gap-3 px-3.5 py-3">
+                      <Bot className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">
                           {agentName}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {getUIAdapter(adapterType).label}
+                          {getUIAdapter(adapterType).label} · CEO role
                         </p>
                       </div>
-                      <Check className="h-4 w-4 text-green-500 shrink-0" />
+                      <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
                     </div>
-                    <div className="flex items-center gap-3 px-3 py-2.5">
-                      <ListTodo className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex items-start gap-3 px-3.5 py-3">
+                      <ListTodo className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">
                           {taskTitle}
                         </p>
-                        <p className="text-xs text-muted-foreground">Task</p>
+                        <p className="text-xs text-muted-foreground">Initial task</p>
                       </div>
-                      <Check className="h-4 w-4 text-green-500 shrink-0" />
+                      <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
                     </div>
+                  </div>
+
+                  <div className="rounded-md border border-blue-300/50 dark:border-blue-500/30 bg-blue-50/50 dark:bg-blue-500/5 px-3 py-2.5">
+                    <p className="text-xs text-blue-900 dark:text-blue-300 leading-relaxed">
+                      <span className="font-medium">On launch:</span> We'll create the company, set up your CEO agent, and open the task so they can start working immediately.
+                    </p>
                   </div>
                 </div>
               )}
 
               {/* Error */}
               {error && (
-                <div className="mt-3">
-                  <p className="text-xs text-destructive">{error}</p>
+                <div className="mt-6 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+                  <p className="text-xs text-destructive font-medium">{error}</p>
                 </div>
               )}
 
@@ -1247,9 +1307,9 @@ export function OnboardingWizard() {
                       {loading ? (
                         <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
                       ) : (
-                        <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                        <Rocket className="h-3.5 w-3.5 mr-1" />
                       )}
-                      {loading ? "Creating..." : "Create & Open Issue"}
+                      {loading ? "Launching..." : "Launch"}
                     </Button>
                   )}
                 </div>
