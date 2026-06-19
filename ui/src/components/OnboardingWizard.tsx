@@ -1363,7 +1363,7 @@ export function OnboardingWizard() {
                       />
                     </div>
                   )}
-                </div>
+                </section>
               )}
 
               {step === 3 && (
