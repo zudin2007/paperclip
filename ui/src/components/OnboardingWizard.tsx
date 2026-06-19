@@ -56,18 +56,54 @@ import {
   Check,
   Loader2,
   ChevronDown,
-  X
+  X,
+  HelpCircle
 } from "lucide-react";
 
 
 type Step = 1 | 2 | 3 | 4;
 type AdapterType = string;
+type OnboardingTemplate = "startup" | "research" | "custom";
 
 const DEFAULT_TASK_DESCRIPTION = `You are the CEO. You set the direction for the company.
 
 - hire a founding engineer
 - write a hiring plan
 - break the roadmap into concrete tasks and start delegating work`;
+
+// Adapter descriptions for tooltips
+const ADAPTER_DESCRIPTIONS: Record<string, string> = {
+  claude_local: "Run Claude locally via the Claude Code CLI. Best for development and testing.",
+  codex_local: "Run Anthropic Codex locally. Specialized for code generation.",
+  gemini_local: "Run Google Gemini locally. Good for multimodal tasks.",
+  cursor: "Integrate with Cursor IDE for editor-based development.",
+  opencode_local: "Run OpenCode locally. Open-source AI model for coding.",
+  http: "Webhook endpoint for custom integrations and HTTP-based agents.",
+  openclaw_gateway: "Connect to OpenClaw gateway for remote agent execution.",
+  process: "Run shell commands and scripts directly (system integration).",
+};
+
+// Onboarding templates for quick start
+const ONBOARDING_TEMPLATES: Record<OnboardingTemplate, { name: string; company: string; goal: string; task: string }> = {
+  startup: {
+    name: "Startup",
+    company: "TechStart Inc",
+    goal: "Build an MVP for a SaaS product and acquire first 100 users",
+    task: "Conduct market research and create a product roadmap",
+  },
+  research: {
+    name: "Research Team",
+    company: "Research Labs",
+    goal: "Accelerate scientific research through AI-assisted analysis",
+    task: "Analyze latest papers in your research area and create a summary",
+  },
+  custom: {
+    name: "Custom",
+    company: "",
+    goal: "",
+    task: "",
+  },
+};
 
 export function OnboardingWizard() {
   const { onboardingOpen, onboardingOptions, closeOnboarding } = useDialog();
@@ -103,6 +139,8 @@ export function OnboardingWizard() {
   const [error, setError] = useState<string | null>(null);
   const [modelOpen, setModelOpen] = useState(false);
   const [modelSearch, setModelSearch] = useState("");
+  const [skipOptionalFields, setSkipOptionalFields] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<OnboardingTemplate>("custom");
 
   // Step 1
   const [companyName, setCompanyName] = useState("");
@@ -340,6 +378,17 @@ export function OnboardingWizard() {
       }));
   }, [filteredModels, adapterType]);
 
+  function applyTemplate(template: OnboardingTemplate) {
+    const templateData = ONBOARDING_TEMPLATES[template];
+    setSelectedTemplate(template);
+    setCompanyName(templateData.company);
+    setCompanyGoal(templateData.goal);
+    setTaskTitle(templateData.task);
+    if (template !== "custom") {
+      setTaskDescription(DEFAULT_TASK_DESCRIPTION);
+    }
+  }
+
   function reset() {
     setStep(1);
     setLoading(false);
@@ -365,6 +414,8 @@ export function OnboardingWizard() {
     setCreatedAgentId(null);
     setCreatedProjectId(null);
     setCreatedIssueRef(null);
+    setSkipOptionalFields(false);
+    setSelectedTemplate("custom");
   }
 
   function handleClose() {
@@ -785,6 +836,31 @@ export function OnboardingWizard() {
                       Step 1/4
                     </span>
                   </div>
+
+                  {/* Template selection */}
+                  <div className="rounded-md border border-border/50 bg-muted/20 p-3">
+                    <label className="text-xs font-medium block mb-2">Quick templates</label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      {Object.entries(ONBOARDING_TEMPLATES).map(([key, template]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => applyTemplate(key as OnboardingTemplate)}
+                          className={cn(
+                            "flex-1 text-xs px-2 py-1.5 rounded transition-colors",
+                            selectedTemplate === key
+                              ? "bg-foreground text-background font-medium"
+                              : "bg-background border border-border/50 hover:bg-accent/50"
+                          )}
+                        >
+                          {template.name}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-2">
+                      Select a template to auto-fill common use cases
+                    </p>
+                  </div>
                   <div className="mt-3 group">
                     <label
                       htmlFor="company-name-input"
@@ -813,29 +889,45 @@ export function OnboardingWizard() {
                       Choose a name for your organization
                     </div>
                   </div>
-                  <div className="group">
-                    <label
-                      htmlFor="company-goal-input"
-                      className={cn(
-                        "text-xs mb-1 block font-medium transition-colors",
-                        companyGoal.trim()
-                          ? "text-foreground"
-                          : "text-muted-foreground group-focus-within:text-foreground"
-                      )}
-                    >
-                      Mission / goal (optional)
-                    </label>
-                    <textarea
-                      id="company-goal-input"
-                      className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 resize-none min-h-[60px]"
-                      placeholder="What is this company trying to achieve?"
-                      value={companyGoal}
-                      onChange={(e) => setCompanyGoal(e.target.value)}
-                      aria-describedby="company-goal-hint"
-                    />
-                    <div id="company-goal-hint" className="text-xs text-muted-foreground mt-1">
-                      Describe your company's mission or long-term goals (you can leave this blank)
+                  {!skipOptionalFields && (
+                    <div className="group">
+                      <label
+                        htmlFor="company-goal-input"
+                        className={cn(
+                          "text-xs mb-1 block font-medium transition-colors",
+                          companyGoal.trim()
+                            ? "text-foreground"
+                            : "text-muted-foreground group-focus-within:text-foreground"
+                        )}
+                      >
+                        Mission / goal (optional)
+                      </label>
+                      <textarea
+                        id="company-goal-input"
+                        className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 resize-none min-h-[60px]"
+                        placeholder="What is this company trying to achieve?"
+                        value={companyGoal}
+                        onChange={(e) => setCompanyGoal(e.target.value)}
+                        aria-describedby="company-goal-hint"
+                      />
+                      <div id="company-goal-hint" className="text-xs text-muted-foreground mt-1">
+                        Describe your company's mission or long-term goals (you can leave this blank)
+                      </div>
                     </div>
+                  )}
+
+                  {/* Skip optional fields toggle */}
+                  <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border/50 bg-muted/20">
+                    <input
+                      id="skip-optional-toggle"
+                      type="checkbox"
+                      checked={skipOptionalFields}
+                      onChange={(e) => setSkipOptionalFields(e.target.checked)}
+                      className="rounded"
+                    />
+                    <label htmlFor="skip-optional-toggle" className="text-xs cursor-pointer flex-1">
+                      Skip optional fields (mission/goal, description)
+                    </label>
                   </div>
                 </section>
               )}
@@ -886,41 +978,62 @@ export function OnboardingWizard() {
                     </legend>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {recommendedAdapters.map((opt) => (
-                        <button
-                          key={opt.type}
-                          className={cn(
-                            "flex flex-col items-center gap-1.5 rounded-md border p-3 text-xs transition-colors relative",
-                            adapterType === opt.type
-                              ? "border-foreground bg-accent"
-                              : "border-border hover:bg-accent/50"
-                          )}
-                          onClick={() => {
-                            const nextType = opt.type;
-                            setAdapterType(nextType);
-                            if (nextType === "codex_local") {
-                              if (!model) {
-                                setModel(DEFAULT_CODEX_LOCAL_MODEL);
+                        <Popover key={opt.type}>
+                          <button
+                            className={cn(
+                              "flex flex-col items-center gap-1.5 rounded-md border p-3 text-xs transition-colors relative w-full",
+                              adapterType === opt.type
+                                ? "border-foreground bg-accent"
+                                : "border-border hover:bg-accent/50"
+                            )}
+                            onClick={() => {
+                              const nextType = opt.type;
+                              setAdapterType(nextType);
+                              if (nextType === "codex_local") {
+                                if (!model) {
+                                  setModel(DEFAULT_CODEX_LOCAL_MODEL);
+                                }
+                                return;
                               }
-                              return;
-                            }
-                            if (nextType === "opencode_local") {
-                              setModel(DEFAULT_OPENCODE_LOCAL_MODEL);
-                              return;
-                            }
-                            setModel("");
-                          }}
-                        >
-                          {opt.recommended && (
-                            <span className="absolute -top-1.5 right-1.5 bg-green-500 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-full leading-none">
-                              Recommended
+                              if (nextType === "opencode_local") {
+                                setModel(DEFAULT_OPENCODE_LOCAL_MODEL);
+                                return;
+                              }
+                              setModel("");
+                            }}
+                          >
+                            {opt.recommended && (
+                              <span className="absolute -top-1.5 right-1.5 bg-green-500 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-full leading-none">
+                                Recommended
+                              </span>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <opt.icon className="h-4 w-4" />
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="p-0 hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring rounded"
+                                  onClick={(e) => e.stopPropagation()}
+                                  aria-label={`Learn more about ${opt.label}`}
+                                >
+                                  <HelpCircle className="h-3 w-3 text-muted-foreground opacity-60 hover:opacity-100" />
+                                </button>
+                              </PopoverTrigger>
+                            </div>
+                            <span className="font-medium">{opt.label}</span>
+                            <span className="text-muted-foreground text-[10px] text-center leading-snug">
+                              {opt.description}
                             </span>
-                          )}
-                          <opt.icon className="h-4 w-4" />
-                          <span className="font-medium">{opt.label}</span>
-                          <span className="text-muted-foreground text-[10px] text-center leading-snug">
-                            {opt.description}
-                          </span>
-                        </button>
+                          </button>
+                          <PopoverContent className="w-56 text-sm" side="right">
+                            <div className="space-y-2">
+                              <p className="font-medium">{opt.label}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {ADAPTER_DESCRIPTIONS[opt.type] || opt.description}
+                              </p>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       ))}
                     </div>
 
@@ -940,44 +1053,69 @@ export function OnboardingWizard() {
                     {showMoreAdapters && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                         {moreAdapters.map((opt) => (
-                           <button
-                             key={opt.type}
-                             disabled={!!opt.comingSoon}
-                             className={cn(
-                               "flex flex-col items-center gap-1.5 rounded-md border p-3 text-xs transition-colors relative",
-                               opt.comingSoon
-                                 ? "border-border opacity-40 cursor-not-allowed"
-                                 : adapterType === opt.type
-                                 ? "border-foreground bg-accent"
-                                 : "border-border hover:bg-accent/50"
-                             )}
-                             onClick={() => {
-                               if (opt.comingSoon) return;
-                               const nextType = opt.type;
-                              setAdapterType(nextType);
-                              if (nextType === "gemini_local" && !model) {
-                                setModel(DEFAULT_GEMINI_LOCAL_MODEL);
-                                return;
-                              }
-                              if (nextType === "cursor" && !model) {
-                                setModel(DEFAULT_CURSOR_LOCAL_MODEL);
-                                return;
-                              }
-                              if (nextType === "opencode_local") {
-                                setModel(DEFAULT_OPENCODE_LOCAL_MODEL);
-                                return;
-                              }
-                              setModel("");
-                            }}
-                          >
-                            <opt.icon className="h-4 w-4" />
-                            <span className="font-medium">{opt.label}</span>
-                            <span className="text-muted-foreground text-[10px] text-center leading-snug">
-                              {opt.comingSoon
-                                ? opt.disabledLabel ?? "Coming soon"
-                                : opt.description}
-                            </span>
-                          </button>
+                          <Popover key={opt.type}>
+                            <button
+                              disabled={!!opt.comingSoon}
+                              className={cn(
+                                "flex flex-col items-center gap-1.5 rounded-md border p-3 text-xs transition-colors relative w-full",
+                                opt.comingSoon
+                                  ? "border-border opacity-40 cursor-not-allowed"
+                                  : adapterType === opt.type
+                                  ? "border-foreground bg-accent"
+                                  : "border-border hover:bg-accent/50"
+                              )}
+                              onClick={() => {
+                                if (opt.comingSoon) return;
+                                const nextType = opt.type;
+                               setAdapterType(nextType);
+                               if (nextType === "gemini_local" && !model) {
+                                 setModel(DEFAULT_GEMINI_LOCAL_MODEL);
+                                 return;
+                               }
+                               if (nextType === "cursor" && !model) {
+                                 setModel(DEFAULT_CURSOR_LOCAL_MODEL);
+                                 return;
+                               }
+                               if (nextType === "opencode_local") {
+                                 setModel(DEFAULT_OPENCODE_LOCAL_MODEL);
+                                 return;
+                               }
+                               setModel("");
+                             }}
+                            >
+                              <div className="flex items-center gap-1">
+                                <opt.icon className="h-4 w-4" />
+                                {!opt.comingSoon && (
+                                  <PopoverTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="p-0 hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring rounded"
+                                      onClick={(e) => e.stopPropagation()}
+                                      aria-label={`Learn more about ${opt.label}`}
+                                    >
+                                      <HelpCircle className="h-3 w-3 text-muted-foreground opacity-60 hover:opacity-100" />
+                                    </button>
+                                  </PopoverTrigger>
+                                )}
+                              </div>
+                              <span className="font-medium">{opt.label}</span>
+                              <span className="text-muted-foreground text-[10px] text-center leading-snug">
+                                {opt.comingSoon
+                                  ? opt.disabledLabel ?? "Coming soon"
+                                  : opt.description}
+                              </span>
+                            </button>
+                            {!opt.comingSoon && (
+                              <PopoverContent className="w-56 text-sm" side="right">
+                                <div className="space-y-2">
+                                  <p className="font-medium">{opt.label}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {ADAPTER_DESCRIPTIONS[opt.type] || opt.description}
+                                  </p>
+                                </div>
+                              </PopoverContent>
+                            )}
+                          </Popover>
                         ))}
                       </div>
                     )}
@@ -1249,6 +1387,7 @@ export function OnboardingWizard() {
                   </div>
                   <div className="group">
                     <label
+                      htmlFor="task-title-input"
                       className={cn(
                         "text-xs mb-1.5 block font-medium transition-colors",
                         taskTitle.trim()
@@ -1256,35 +1395,43 @@ export function OnboardingWizard() {
                           : "text-muted-foreground group-focus-within:text-foreground"
                       )}
                     >
-                      Task title
+                      Task title <span className="text-destructive" aria-label="required">*</span>
                     </label>
                     <input
+                      id="task-title-input"
+                      type="text"
                       className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 transition-colors"
                       placeholder="e.g. Research competitor pricing"
                       value={taskTitle}
                       onChange={(e) => setTaskTitle(e.target.value)}
+                      aria-required="true"
+                      aria-invalid={taskTitle.trim() === ""}
                       autoFocus
                     />
                   </div>
-                  <div className="group">
-                    <label
-                      className={cn(
-                        "text-xs mb-1.5 block font-medium transition-colors",
-                        taskDescription.trim()
-                          ? "text-foreground"
-                          : "text-muted-foreground group-focus-within:text-foreground"
-                      )}
-                    >
-                      Description (optional)
-                    </label>
-                    <textarea
-                      ref={textareaRef}
-                      className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 resize-none min-h-[120px] max-h-[300px] overflow-y-auto transition-colors"
-                      placeholder="Add more detail about what the agent should do..."
-                      value={taskDescription}
-                      onChange={(e) => setTaskDescription(e.target.value)}
-                    />
-                  </div>
+                  {!skipOptionalFields && (
+                    <div className="group">
+                      <label
+                        htmlFor="task-description-input"
+                        className={cn(
+                          "text-xs mb-1.5 block font-medium transition-colors",
+                          taskDescription.trim()
+                            ? "text-foreground"
+                            : "text-muted-foreground group-focus-within:text-foreground"
+                        )}
+                      >
+                        Description (optional)
+                      </label>
+                      <textarea
+                        ref={textareaRef}
+                        id="task-description-input"
+                        className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 resize-none min-h-[120px] max-h-[300px] overflow-y-auto transition-colors"
+                        placeholder="Add more detail about what the agent should do..."
+                        value={taskDescription}
+                        onChange={(e) => setTaskDescription(e.target.value)}
+                      />
+                    </div>
+                  )}
                 </section>
               )}
 
