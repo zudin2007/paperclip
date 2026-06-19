@@ -627,9 +627,9 @@ export function OnboardingWizard() {
               step === 1 ? "md:w-1/2" : "md:w-full"
             )}
           >
-            <div className="w-full max-w-md mx-auto my-auto px-8 py-12 shrink-0">
+            <div className="w-full max-w-md mx-auto my-auto px-4 py-8 sm:px-6 sm:py-10 md:px-8 md:py-12 shrink-0">
               {/* Progress bar */}
-              <div className="mb-6">
+              <div className="mb-5 sm:mb-6">
                 <div className="h-1.5 bg-border rounded-full overflow-hidden">
                   <div
                     className="h-full bg-foreground transition-all duration-500 ease-out"
@@ -639,7 +639,7 @@ export function OnboardingWizard() {
               </div>
 
               {/* Progress tabs */}
-              <div className="flex items-center gap-0 mb-8 border-b border-border">
+              <div className="flex items-center gap-0 mb-6 sm:mb-8 border-b border-border overflow-x-auto">
                 {(
                   [
                     { step: 1 as Step, label: "Company", icon: Building2 },
@@ -655,8 +655,9 @@ export function OnboardingWizard() {
                       key={s}
                       type="button"
                       onClick={() => setStep(s)}
+                      title={label}
                       className={cn(
-                        "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer relative",
+                        "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer relative shrink-0 whitespace-nowrap",
                         isCurrent
                           ? "border-foreground text-foreground"
                           : isCompleted
@@ -665,11 +666,11 @@ export function OnboardingWizard() {
                       )}
                     >
                       {isCompleted && !isCurrent ? (
-                        <Check className="h-3.5 w-3.5 text-green-500" />
+                        <Check className="h-3 sm:h-3.5 w-3 sm:w-3.5 text-green-500 shrink-0" />
                       ) : (
-                        <Icon className="h-3.5 w-3.5" />
+                        <Icon className="h-3 sm:h-3.5 w-3 sm:w-3.5 shrink-0" />
                       )}
-                      {label}
+                      <span className="hidden sm:inline">{label}</span>
                     </button>
                   );
                 })}
@@ -678,20 +679,20 @@ export function OnboardingWizard() {
               {/* Step content */}
               {step === 1 && (
                 <div className="space-y-5">
-                  <div className="flex items-start justify-between gap-3 mb-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-1">
                     <div className="flex items-center gap-3">
-                      <div className="bg-muted/50 p-2 rounded">
-                        <Building2 className="h-5 w-5 text-muted-foreground" />
+                      <div className="bg-muted/50 p-2 rounded shrink-0">
+                        <Building2 className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
                       </div>
-                      <div>
-                        <h3 className="font-medium">Name your company</h3>
+                      <div className="min-w-0">
+                        <h3 className="font-medium text-sm sm:text-base">Name your company</h3>
                         <p className="text-xs text-muted-foreground">
                           This is the organization your agents will work for.
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                      Step 1 of 4
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5">
+                      Step 1/4
                     </span>
                   </div>
                   <div className="mt-3 group">
@@ -736,20 +737,20 @@ export function OnboardingWizard() {
 
               {step === 2 && (
                 <div className="space-y-5">
-                  <div className="flex items-start justify-between gap-3 mb-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-1">
                     <div className="flex items-center gap-3">
-                      <div className="bg-muted/50 p-2 rounded">
-                        <Bot className="h-5 w-5 text-muted-foreground" />
+                      <div className="bg-muted/50 p-2 rounded shrink-0">
+                        <Bot className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
                       </div>
-                      <div>
-                        <h3 className="font-medium">Create your first agent</h3>
+                      <div className="min-w-0">
+                        <h3 className="font-medium text-sm sm:text-base">Create your first agent</h3>
                         <p className="text-xs text-muted-foreground">
                           Choose how this agent will run tasks.
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                      Step 2 of 4
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5">
+                      Step 2/4
                     </span>
                   </div>
                   <div>
@@ -767,10 +768,10 @@ export function OnboardingWizard() {
 
                   {/* Adapter type radio cards */}
                   <div>
-                    <label className="text-xs text-muted-foreground mb-2 block">
+                    <label className="text-xs text-muted-foreground mb-2 block font-medium">
                       Adapter type
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {recommendedAdapters.map((opt) => (
                         <button
                           key={opt.type}
@@ -803,7 +804,7 @@ export function OnboardingWizard() {
                           )}
                           <opt.icon className="h-4 w-4" />
                           <span className="font-medium">{opt.label}</span>
-                          <span className="text-muted-foreground text-[10px]">
+                          <span className="text-muted-foreground text-[10px] text-center leading-snug">
                             {opt.description}
                           </span>
                         </button>
@@ -824,7 +825,7 @@ export function OnboardingWizard() {
                     </button>
 
                     {showMoreAdapters && (
-                      <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                         {moreAdapters.map((opt) => (
                            <button
                              key={opt.type}
@@ -858,7 +859,7 @@ export function OnboardingWizard() {
                           >
                             <opt.icon className="h-4 w-4" />
                             <span className="font-medium">{opt.label}</span>
-                            <span className="text-muted-foreground text-[10px]">
+                            <span className="text-muted-foreground text-[10px] text-center leading-snug">
                               {opt.comingSoon
                                 ? opt.disabledLabel ?? "Coming soon"
                                 : opt.description}
@@ -873,7 +874,7 @@ export function OnboardingWizard() {
                   {isLocalAdapter && (
                     <div className="space-y-3">
                       <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">
+                        <label className="text-xs text-muted-foreground mb-1 block font-medium">
                           Model
                         </label>
                         <Popover
@@ -884,9 +885,10 @@ export function OnboardingWizard() {
                           }}
                         >
                           <PopoverTrigger asChild>
-                            <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-sm hover:bg-accent/50 transition-colors w-full justify-between">
+                            <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 sm:px-2.5 py-1.5 text-xs sm:text-sm hover:bg-accent/50 transition-colors w-full justify-between">
                               <span
                                 className={cn(
+                                  "truncate",
                                   !model && "text-muted-foreground"
                                 )}
                               >
@@ -897,7 +899,7 @@ export function OnboardingWizard() {
                                       ? "Select model (required)"
                                       : "Default")}
                               </span>
-                              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                              <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
                             </button>
                           </PopoverTrigger>
                           <PopoverContent
@@ -974,8 +976,8 @@ export function OnboardingWizard() {
 
                   {isLocalAdapter && (
                     <div className="space-y-2 rounded-md border border-border p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="min-w-0">
                           <p className="text-xs font-medium">
                             Adapter environment check
                           </p>
@@ -987,7 +989,7 @@ export function OnboardingWizard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 px-2.5 text-xs"
+                          className="h-7 px-2.5 text-xs shrink-0"
                           disabled={adapterEnvLoading}
                           onClick={() => void runAdapterEnvironmentTest()}
                         >
@@ -1115,21 +1117,21 @@ export function OnboardingWizard() {
 
               {step === 3 && (
                 <div className="space-y-5">
-                  <div className="flex items-start justify-between gap-3 mb-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-1">
                     <div className="flex items-center gap-3">
-                      <div className="bg-muted/50 p-2 rounded">
-                        <ListTodo className="h-5 w-5 text-muted-foreground" />
+                      <div className="bg-muted/50 p-2 rounded shrink-0">
+                        <ListTodo className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
                       </div>
-                      <div>
-                        <h3 className="font-medium">Give it something to do</h3>
+                      <div className="min-w-0">
+                        <h3 className="font-medium text-sm sm:text-base">Give it something to do</h3>
                         <p className="text-xs text-muted-foreground">
                           Give your agent a small task to start with — a bug fix,
                           a research question, writing a script.
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                      Step 3 of 4
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5">
+                      Step 3/4
                     </span>
                   </div>
                   <div className="group">
@@ -1175,21 +1177,21 @@ export function OnboardingWizard() {
 
               {step === 4 && (
                 <div className="space-y-5">
-                  <div className="flex items-start justify-between gap-3 mb-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-1">
                     <div className="flex items-center gap-3">
-                      <div className="bg-muted/50 p-2 rounded">
-                        <Rocket className="h-5 w-5 text-muted-foreground" />
+                      <div className="bg-muted/50 p-2 rounded shrink-0">
+                        <Rocket className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
                       </div>
-                      <div>
-                        <h3 className="font-medium">Ready to launch</h3>
+                      <div className="min-w-0">
+                        <h3 className="font-medium text-sm sm:text-base">Ready to launch</h3>
                         <p className="text-xs text-muted-foreground">
                           Everything is set up. Launching now will create the
                           starter task, wake the agent, and open the issue.
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                      Step 4 of 4
+                    <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded shrink-0 sm:mt-0.5">
+                      Step 4/4
                     </span>
                   </div>
                   <div className="border border-border/50 divide-y divide-border/50 bg-muted/30 rounded-md overflow-hidden">
@@ -1237,30 +1239,32 @@ export function OnboardingWizard() {
 
               {/* Error */}
               {error && (
-                <div className="mt-6 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5">
-                  <p className="text-xs text-destructive font-medium">{error}</p>
+                <div className="mt-5 sm:mt-6 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+                  <p className="text-xs text-destructive font-medium leading-relaxed break-words">{error}</p>
                 </div>
               )}
 
               {/* Footer navigation */}
-              <div className="flex items-center justify-between mt-8">
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mt-6 sm:mt-8">
                 <div>
                   {step > 1 && step > (onboardingOptions.initialStep ?? 1) && (
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="w-full sm:w-auto"
                       onClick={() => setStep((step - 1) as Step)}
                       disabled={loading}
                     >
                       <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-                      Back
+                      <span className="hidden xs:inline">Back</span>
                     </Button>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   {step === 1 && (
                     <Button
                       size="sm"
+                      className="flex-1 sm:flex-none"
                       disabled={!companyName.trim() || loading}
                       onClick={handleStep1Next}
                     >
@@ -1275,6 +1279,7 @@ export function OnboardingWizard() {
                   {step === 2 && (
                     <Button
                       size="sm"
+                      className="flex-1 sm:flex-none"
                       disabled={
                         !agentName.trim() || loading || adapterEnvLoading
                       }
@@ -1291,6 +1296,7 @@ export function OnboardingWizard() {
                   {step === 3 && (
                     <Button
                       size="sm"
+                      className="flex-1 sm:flex-none"
                       disabled={!taskTitle.trim() || loading}
                       onClick={handleStep3Next}
                     >
@@ -1303,7 +1309,12 @@ export function OnboardingWizard() {
                     </Button>
                   )}
                   {step === 4 && (
-                    <Button size="sm" disabled={loading} onClick={handleLaunch}>
+                    <Button
+                      size="sm"
+                      className="flex-1 sm:flex-none"
+                      disabled={loading}
+                      onClick={handleLaunch}
+                    >
                       {loading ? (
                         <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
                       ) : (
