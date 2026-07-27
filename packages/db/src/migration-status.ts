@@ -50,12 +50,25 @@ async function main(): Promise<void> {
       `Pending migrations via ${payload.source}: ${payload.pendingMigrations.join(", ")}`,
     );
   } finally {
-    await connection.stop();
+    // A hung pg_ctl stop must not keep this one-shot script alive forever.
+    await Promise.race([
+      connection.stop(),
+      new Promise((resolve) => setTimeout(resolve, 10_000)),
+    ]);
   }
 }
 
-main().catch((error) => {
-  const err = toError(error, "Migration status check failed");
-  process.stderr.write(`${err.stack ?? err.message}\n`);
-  process.exit(1);
-});
+function flushStdoutAndExit(code: number): never {
+  // Lingering embedded-postgres/pg handles can keep the event loop alive
+  // (seen on Windows), so exit explicitly once stdout is drained.
+  process.stdout.write("", () => process.exit(code));
+  return undefined as never;
+}
+
+main()
+  .then(() => flushStdoutAndExit(0))
+  .catch((error) => {
+    const err = toError(error, "Migration status check failed");
+    process.stderr.write(`${err.stack ?? err.message}\n`);
+    process.exit(1);
+  });

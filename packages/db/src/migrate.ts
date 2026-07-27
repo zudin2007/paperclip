@@ -22,8 +22,21 @@ async function main(): Promise<void> {
     }
     console.log("Migrations complete");
   } finally {
-    await resolved.stop();
+    // A hung pg_ctl stop must not keep this one-shot script alive forever.
+    await Promise.race([
+      resolved.stop(),
+      new Promise((resolve) => setTimeout(resolve, 10_000)),
+    ]);
   }
 }
 
-await main();
+try {
+  await main();
+} catch (error) {
+  const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
+  process.stderr.write(`${message}\n`);
+  process.exit(1);
+}
+// Lingering embedded-postgres/pg handles can keep the event loop alive
+// (seen on Windows), so exit explicitly once stdout is drained.
+process.stdout.write("", () => process.exit(0));
