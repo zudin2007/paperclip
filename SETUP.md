@@ -207,6 +207,105 @@ pnpm dev:stop         # Stop current dev runner
 ### Check Logs
 Development server logs ditampilkan di console saat menjalankan `pnpm dev`.
 
+## Troubleshooting (Hasil Setup Nyata di Windows)
+
+Catatan dari setup end-to-end di dua PC Windows. Kerjakan berurutan kalau menemui masalah serupa.
+
+### 1. Versi pnpm WAJIB 9.15.4
+
+pnpm 10/11 mengabaikan `pnpm.patchedDependencies` di `package.json` (muncul warning kuning *"The pnpm field in package.json is no longer read"*). Akibatnya patch untuk `embedded-postgres` tidak diterapkan dan install jadi rusak (gejala: `Command "tsx" not found`).
+
+```cmd
+npm install -g pnpm@9.15.4
+rmdir /s /q node_modules
+pnpm install
+```
+
+Install yang benar TIDAK menampilkan warning kuning tersebut.
+
+### 2. Error `EPERM: operation not permitted, symlink` saat pnpm install
+
+Windows memblokir pembuatan symlink tanpa izin. Aktifkan **Developer Mode**:
+Settings → **System** → **For developers** → toggle **Developer Mode** ON. Lalu buka terminal baru dan ulangi `pnpm install`.
+
+### 3. JANGAN jalankan dari terminal Administrator
+
+PostgreSQL menolak dijalankan dari proses elevated:
+*"Execution of PostgreSQL by a user with administrative permissions is not permitted"*.
+Selalu pakai terminal biasa. (Developer Mode membuat hak admin tidak diperlukan.)
+
+### 4. Tambahkan pengecualian Windows Defender
+
+Tanpa exclusion, Defender men-scan binary postgres saat first run — init database jadi sangat lambat (menit-menitan) bahkan bisa korup (`postgresql.conf` 0 bytes). Tambahkan di
+Windows Security → Virus & threat protection → Exclusions:
+
+- `C:\Users\<user>\paperclip` (folder repo)
+- `C:\Users\<user>\.paperclip` (folder data)
+
+### 5. Error `pre-existing shared memory block is still in use`
+
+Ada proses postgres lama yang masih hidup dan memegang folder database:
+
+```cmd
+taskkill /f /im postgres.exe
+pnpm dev
+```
+
+### 6. Reset database (migration bentrok / error `42P07 relation already exists`)
+
+Percobaan gagal yang meninggalkan database setengah-jadi bisa dibersihkan total (data hilang, hanya untuk instance baru/percobaan):
+
+```cmd
+taskkill /f /im postgres.exe
+rmdir /s /q C:\Users\<user>\.paperclip
+pnpm dev
+```
+
+### 7. PowerShell memblokir npm (`running scripts is disabled`)
+
+Pakai **cmd** (bukan PowerShell), atau perbaiki sekali dengan:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+### 8. `pnpm dev` diam/menggantung tanpa output setelah deprecation warning
+
+Dulu disebabkan script migrasi one-shot yang tidak pernah exit di Windows (event loop tertahan handle embedded-postgres). Sudah diperbaiki di repo ini (`packages/db/src/migrate.ts` dan `migration-status.ts`): script kini exit eksplisit dan sengaja membiarkan postgres tetap hidup agar diadopsi server (log: *"Embedded PostgreSQL already running; reusing existing process"*). Pastikan sudah `git pull` versi terbaru.
+
+Debug manual jalur yang sama secara terlihat:
+
+```cmd
+pnpm --filter @paperclipai/db exec tsx src/migration-status.ts --json
+pnpm db:migrate
+```
+
+### 9. Agent run gagal cepat (±7 detik) / "Recovery needed"
+
+Agent butuh CLI runtime di mesin yang sama. Untuk adapter `Claude Code (local)`:
+
+```cmd
+npm install -g @anthropic-ai/claude-code
+claude
+```
+
+Di dalam REPL ketik `/login` (tanpa prefix `claude`) dan pilih akun **claude.ai subscription** — atau isi kredit API di https://platform.claude.com/settings/billing bila muncul *"Credit balance too low"*. Lalu di UI: halaman agent → panel **Adapter** → tombol **Test** → harus **Passed** (field working directory/cwd sudah deprecated, tidak perlu diisi — workspace dikelola otomatis).
+
+### 10. Menjalankan sebagai root (Linux/container)
+
+Embedded postgres tidak bisa init di path yang tak bisa diakses user `postgres` (mis. `/root`). Solusi: set `PAPERCLIP_HOME` ke lokasi yang bisa diakses (mis. `/home/user/.paperclip-home`, parent 755) sebelum `pnpm dev`.
+
+## Akses Online (dari HP / perangkat lain)
+
+Cara paling aman dan mudah: **Tailscale** (VPN pribadi, gratis untuk personal):
+
+1. Install Tailscale di PC server dan HP, login akun yang sama
+2. Jalankan `pnpm dev --bind tailnet` (mode `authenticated/private` — first run akan minta buat akun & klaim admin)
+3. Cek alamat: `tailscale ip -4`
+4. Buka `http://<ip-tailscale>:3100` dari perangkat lain
+
+Detail: `docs/deploy/tailscale-private-access.md`. PC harus tetap menyala (nonaktifkan sleep) agar agents jalan 24/7.
+
 ## Resources
 
 - **Documentation**: https://paperclip.ing/docs
