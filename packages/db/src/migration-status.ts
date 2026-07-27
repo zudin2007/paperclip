@@ -50,11 +50,10 @@ async function main(): Promise<void> {
       `Pending migrations via ${payload.source}: ${payload.pendingMigrations.join(", ")}`,
     );
   } finally {
-    // A hung pg_ctl stop must not keep this one-shot script alive forever.
-    await Promise.race([
-      connection.stop(),
-      new Promise((resolve) => setTimeout(resolve, 10_000)),
-    ]);
+    // Leave embedded postgres running: stopping here can strand the cluster
+    // mid-shutdown on Windows (pid file gone, shared memory still held),
+    // which breaks the dev server start right after. The server adopts a
+    // running cluster via postmaster.pid; external-postgres stop is a no-op.
   }
 }
 
