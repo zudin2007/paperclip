@@ -1854,11 +1854,30 @@ export function writePaperclipSkillSyncPreference(
   return next;
 }
 
+async function linkSkillWithWindowsFallback(linkSource: string, linkTarget: string): Promise<void> {
+  try {
+    await fs.symlink(linkSource, linkTarget);
+    return;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException | null)?.code;
+    if (process.platform !== "win32" || (code !== "EPERM" && code !== "EACCES")) {
+      throw err;
+    }
+  }
+  // Directory symlinks need elevation/Developer Mode on Windows; junctions
+  // don't. Fall back to a junction for directories, and a copy for files.
+  const sourceStat = await fs.stat(linkSource);
+  if (sourceStat.isDirectory()) {
+    await fs.symlink(linkSource, linkTarget, "junction");
+    return;
+  }
+  await fs.cp(linkSource, linkTarget, { recursive: true });
+}
+
 export async function ensurePaperclipSkillSymlink(
   source: string,
   target: string,
-  linkSkill: (source: string, target: string) => Promise<void> = (linkSource, linkTarget) =>
-    fs.symlink(linkSource, linkTarget),
+  linkSkill: (source: string, target: string) => Promise<void> = linkSkillWithWindowsFallback,
 ): Promise<"created" | "repaired" | "skipped"> {
   const existing = await fs.lstat(target).catch(() => null);
   if (!existing) {

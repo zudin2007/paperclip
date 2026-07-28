@@ -50,12 +50,24 @@ async function main(): Promise<void> {
       `Pending migrations via ${payload.source}: ${payload.pendingMigrations.join(", ")}`,
     );
   } finally {
-    await connection.stop();
+    // Leave embedded postgres running: stopping here can strand the cluster
+    // mid-shutdown on Windows (pid file gone, shared memory still held),
+    // which breaks the dev server start right after. The server adopts a
+    // running cluster via postmaster.pid; external-postgres stop is a no-op.
   }
 }
 
-main().catch((error) => {
-  const err = toError(error, "Migration status check failed");
-  process.stderr.write(`${err.stack ?? err.message}\n`);
-  process.exit(1);
-});
+function flushStdoutAndExit(code: number): never {
+  // Lingering embedded-postgres/pg handles can keep the event loop alive
+  // (seen on Windows), so exit explicitly once stdout is drained.
+  process.stdout.write("", () => process.exit(code));
+  return undefined as never;
+}
+
+main()
+  .then(() => flushStdoutAndExit(0))
+  .catch((error) => {
+    const err = toError(error, "Migration status check failed");
+    process.stderr.write(`${err.stack ?? err.message}\n`);
+    process.exit(1);
+  });
